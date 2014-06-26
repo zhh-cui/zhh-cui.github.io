@@ -1,3 +1,6 @@
+---
+author: CUI Zhaohui
+---
 <!DOCTYPE html>
 <html>
 
@@ -5,9 +8,7 @@
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
     <meta name="description" content="码农zhh-cui的开发日志 : 积薄而为厚，聚少而为多。" />
-
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
-
     <title>码农zhh-cui的开发日志</title>
   </head>
 
@@ -27,9 +28,7 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h1>
-<a name="%E7%A0%81%E5%86%9Czhh-cui%E7%9A%84%E5%BC%80%E5%8F%91%E6%97%A5%E5%BF%97" class="anchor" href="#%E7%A0%81%E5%86%9Czhh-cui%E7%9A%84%E5%BC%80%E5%8F%91%E6%97%A5%E5%BF%97"><span class="octicon octicon-link"></span></a>码农zhh-cui的开发日志</h1>
-
+        <h3>权利声明</h3>
 <p>利用<a href="www.github.com">GitHub</a>提供的pages功能，以及内建模板，我制作了本博客，以便记录本人在编写源代码过程中遇到的各种情况，包括但不限于以下方面：</p>
 
 <ol>
@@ -40,6 +39,14 @@
 </ol><p>本博客内容完全公开，除了页面中有单独声明以外，博客中本人提供的代码部分（不包括其他人在评论中的代码）依照GPLv3协议发布，本人提供的其余所有内容（包括但不限于文字、图片、声音、影像等）依照 Creative Commons Attribution 4.0 International license协议发布，第三方提供的内容的相关权利仍归其所有人。</p>
 
 <p>如果博客内容方面有侵犯到您的权益，我在此表示诚挚歉意，并请及时联系我进行处理。</p>
+
+        <h3>日志列表</h3>
+        <ul>
+          {% for post in site.posts reverse%}
+          <li>{{ post.date | date_to_string }} <a href="{{ post.url }}">{{post.title}}</a></li>
+          {% endfor %}
+        </ul>
+
       </section>
     </div>
 
