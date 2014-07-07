@@ -26,44 +26,46 @@ title: 增强的异常处理方法（enhancedExceptionHandlingMethod）
 
 ### 失败尝试一 ###
 
-        #include <iostream>
-        #include <csignal>
-        #include <cstdio>
+{% highlight c++ linenos %}
+#include <iostream>
+#include <csignal>
+#include <cstdio>
 
-        sig_atomic_t signaled = 0;
+sig_atomic_t signaled = 0;
 
-        void new_sigint_handler(int param) {
-            std::cout << "In new_sigint_handler" << std::endl;
-            signaled = 1;
-        }
+void new_sigint_handler(int param) {
+    std::cout << "In new_sigint_handler" << std::endl;
+    signaled = 1;
+}
 
-        int main(int argc, char **argv) {
-            std::cout << "Set user handler for SIGINT signal" << std::endl;
-            __sighandler_t old_sigint_handler;
-            old_sigint_handler = signal(SIGINT, new_sigint_handler);
-            if (SIG_ERR == old_sigint_handler) {
-                perror("Error on set SIGINT handler");
-                return -1;
-            } else if (SIG_DFL == old_sigint_handler) {
-                std::cout << "Found old SIGINT handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigint_handler) {
-                std::cout << "Found old SIGINT handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
+int main(int argc, char **argv) {
+    std::cout << "Set user handler for SIGINT signal" << std::endl;
+    __sighandler_t old_sigint_handler;
+    old_sigint_handler = signal(SIGINT, new_sigint_handler);
+    if (SIG_ERR == old_sigint_handler) {
+        perror("Error on set SIGINT handler");
+        return -1;
+    } else if (SIG_DFL == old_sigint_handler) {
+        std::cout << "Found old SIGINT handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigint_handler) {
+        std::cout << "Found old SIGINT handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
 
-            while (!signaled) {
-            }
+    while (!signaled) {
+    }
 
-            std::cout << "Set old handler for SIGINT signal" << std::endl;
-            __sighandler_t reset_sigint_handler;
-            reset_sigint_handler = signal(SIGINT, old_sigint_handler);
-            if (SIG_ERR == reset_sigint_handler) {
-                perror("Error on reset SIGINT handler");
-                return -2;
-            }
-            std::cout << "Set successfully" << std::endl;
-            return 0;
-        }
+    std::cout << "Set old handler for SIGINT signal" << std::endl;
+    __sighandler_t reset_sigint_handler;
+    reset_sigint_handler = signal(SIGINT, old_sigint_handler);
+    if (SIG_ERR == reset_sigint_handler) {
+        perror("Error on reset SIGINT handler");
+        return -2;
+    }
+    std::cout << "Set successfully" << std::endl;
+    return 0;
+}
+{% endhighlight %}
 
 用户定义的“new_sigint_handler\(\)”函数通过修改全局变量“signaled”的值来通知主程序是否捕获到SIGINT信号。
 
@@ -71,70 +73,76 @@ title: 增强的异常处理方法（enhancedExceptionHandlingMethod）
 
 运行结果：
 
-        Set user handler for SIGINT signal
-        Found old SIGINT handler: default handling
-        Set successfully
-        ^CIn new_sigint_handler
-        Set old handler for SIGINT signal
-        Set successfully
+{% highlight text linenos %}
+Set user handler for SIGINT signal
+Found old SIGINT handler: default handling
+Set successfully
+^CIn new_sigint_handler
+Set old handler for SIGINT signal
+Set successfully
+{% endhighlight %}
 
 ###### 这种处理方法貌似还不错，但是没有利用C++的异常处理机制，主程序流程不够灵活，显得很笨拙。*尤其是，对于SIGFPE、SIGSEGV信号，程序行为出现了异常*。 ######
 
-        #include <iostream>
-        #include <csignal>
-        #include <cstdio>
+{% highlight c++ linenos %}
+#include <iostream>
+#include <csignal>
+#include <cstdio>
 
-        sig_atomic_t signaled = 0;
+sig_atomic_t signaled = 0;
 
-        void new_sigfpe_handler(int param) {
-            std::cout << "In new_sigfpe_handler" << std::endl;
-            signaled = 1;
-            sleep(1);
-        }
+void new_sigfpe_handler(int param) {
+    std::cout << "In new_sigfpe_handler" << std::endl;
+    signaled = 1;
+    sleep(1);
+}
 
-        int main(int argc, char **argv) {
-            std::cout << "Set user handler for SIGFPE signal" << std::endl;
-            __sighandler_t old_sigfpe_handler;
-            old_sigfpe_handler = signal(SIGFPE, new_sigfpe_handler);
-            if (SIG_ERR == old_sigfpe_handler) {
-                perror("Error on set SIGFPE handler");
-                return -1;
-            } else if (SIG_DFL == old_sigfpe_handler) {
-                std::cout << "Found old SIGFPE handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigfpe_handler) {
-                std::cout << "Found old SIGFPE handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
+int main(int argc, char **argv) {
+    std::cout << "Set user handler for SIGFPE signal" << std::endl;
+    __sighandler_t old_sigfpe_handler;
+    old_sigfpe_handler = signal(SIGFPE, new_sigfpe_handler);
+    if (SIG_ERR == old_sigfpe_handler) {
+        perror("Error on set SIGFPE handler");
+        return -1;
+    } else if (SIG_DFL == old_sigfpe_handler) {
+        std::cout << "Found old SIGFPE handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigfpe_handler) {
+        std::cout << "Found old SIGFPE handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
 
-            float a = 0.0;
-            float b = 10 / a;
-            std::cout << "b = " << b << std::endl;
-            int c = 0;
-            int d = 10 / c;
-            while (!signaled) {
-            }
+    float a = 0.0;
+    float b = 10 / a;
+    std::cout << "b = " << b << std::endl;
+    int c = 0;
+    int d = 10 / c;
+    while (!signaled) {
+    }
 
-            std::cout << "Set old handler for SIGFPE signal" << std::endl;
-            __sighandler_t reset_sigfpe_handler;
-            reset_sigfpe_handler = signal(SIGFPE, old_sigfpe_handler);
-            if (SIG_ERR == reset_sigfpe_handler) {
-                perror("Error on reset SIGFPE handler");
-                return -2;
-            }
-            std::cout << "Set successfully" << std::endl;
-            return 0;
-        }
+    std::cout << "Set old handler for SIGFPE signal" << std::endl;
+    __sighandler_t reset_sigfpe_handler;
+    reset_sigfpe_handler = signal(SIGFPE, old_sigfpe_handler);
+    if (SIG_ERR == reset_sigfpe_handler) {
+        perror("Error on reset SIGFPE handler");
+        return -2;
+    }
+    std::cout << "Set successfully" << std::endl;
+    return 0;
+}
+{% endhighlight %}
 
 运行结果：
 
-        Set user handler for SIGFPE signal
-        Found old SIGFPE handler: default handling
-        Set successfully
-        b = inf
-        In new_sigfpe_handler
-        In new_sigfpe_handler
-        In new_sigfpe_handler
-        ^C
+{% highlight text linenos %}
+Set user handler for SIGFPE signal
+Found old SIGFPE handler: default handling
+Set successfully
+b = inf
+In new_sigfpe_handler
+In new_sigfpe_handler
+In new_sigfpe_handler
+^C
+{% endhighlight %}
 
 在“new_sigfpe_handler\(\)”中，增加“sleep\(1\);”的目的是为了让程序慢下来，因为：
 
@@ -144,63 +152,67 @@ title: 增强的异常处理方法（enhancedExceptionHandlingMethod）
 
 SIGSEGV信号也存在类似的情况。
 
-        #include <iostream>
-        #include <csignal>
-        #include <cstdio>
+{% highlight c++ linenos %}
+#include <iostream>
+#include <csignal>
+#include <cstdio>
 
-        sig_atomic_t signaled = 0;
+sig_atomic_t signaled = 0;
 
-        void new_sigsegv_handler(int param) {
-            std::cout << "In new_sigsegv_handler" << std::endl;
-            signaled = 1;
-            sleep(1);
-        }
+void new_sigsegv_handler(int param) {
+    std::cout << "In new_sigsegv_handler" << std::endl;
+    signaled = 1;
+    sleep(1);
+}
 
-        int main(int argc, char **argv) {
-            std::cout << "Set user handler for SIGSEGV signal" << std::endl;
-            __sighandler_t old_sigsegv_handler;
-            old_sigsegv_handler = signal(SIGSEGV, new_sigsegv_handler);
-            if (SIG_ERR == old_sigsegv_handler) {
-                perror("Error on set SIGSEGV handler");
-                return -1;
-            } else if (SIG_DFL == old_sigsegv_handler) {
-                std::cout << "Found old SIGSEGV handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigsegv_handler) {
-                std::cout << "Found old SIGSEGV handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
+int main(int argc, char **argv) {
+    std::cout << "Set user handler for SIGSEGV signal" << std::endl;
+    __sighandler_t old_sigsegv_handler;
+    old_sigsegv_handler = signal(SIGSEGV, new_sigsegv_handler);
+    if (SIG_ERR == old_sigsegv_handler) {
+        perror("Error on set SIGSEGV handler");
+        return -1;
+    } else if (SIG_DFL == old_sigsegv_handler) {
+        std::cout << "Found old SIGSEGV handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigsegv_handler) {
+        std::cout << "Found old SIGSEGV handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
 
-            int a[10];
-            for (int i = 0; i < 65535; ++i) {
-                a[i] = i;
-            }
-            std::cout << "Check" << std::endl;
-            for (int i = 50000; i < 50005; ++i) {
-                std::cout << "a[" << i << "] = " << i << std::endl;
-            }
-            while (!signaled) {
-            }
+    int a[10];
+    for (int i = 0; i < 65535; ++i) {
+        a[i] = i;
+    }
+    std::cout << "Check" << std::endl;
+    for (int i = 50000; i < 50005; ++i) {
+        std::cout << "a[" << i << "] = " << i << std::endl;
+    }
+    while (!signaled) {
+    }
 
-            std::cout << "Set old handler for SIGSEGV signal" << std::endl;
-            __sighandler_t reset_sigsegv_handler;
-            reset_sigsegv_handler = signal(SIGSEGV, old_sigsegv_handler);
-            if (SIG_ERR == reset_sigsegv_handler) {
-                perror("Error on reset SIGSEGV handler");
-                return -2;
-            }
-            std::cout << "Set successfully" << std::endl;
-            return 0;
-        }
+    std::cout << "Set old handler for SIGSEGV signal" << std::endl;
+    __sighandler_t reset_sigsegv_handler;
+    reset_sigsegv_handler = signal(SIGSEGV, old_sigsegv_handler);
+    if (SIG_ERR == reset_sigsegv_handler) {
+        perror("Error on reset SIGSEGV handler");
+        return -2;
+    }
+    std::cout << "Set successfully" << std::endl;
+    return 0;
+}
+{% endhighlight %}
 
 运行结果：
 
-        Set user handler for SIGSEGV signal
-        Found old SIGSEGV handler: default handling
-        Set successfully
-        In new_sigsegv_handler
-        In new_sigsegv_handler
-        In new_sigsegv_handler
-        ^C
+{% highlight text linenos %}
+Set user handler for SIGSEGV signal
+Found old SIGSEGV handler: default handling
+Set successfully
+In new_sigsegv_handler
+In new_sigsegv_handler
+In new_sigsegv_handler
+^C
+{% endhighlight %}
 
 通过查询signal的man手册，看到如下文字：
 
@@ -209,57 +221,61 @@ SIGSEGV信号也存在类似的情况。
 ### 失败尝试二 ###
 将全局变量修改成抛出异常，期待主程序能够捕获。
 
-        #include <iostream>
-        #include <csignal>
-        #include <cstdio>
-        #include <exception>
+{% highlight c++ linenos %}
+#include <iostream>
+#include <csignal>
+#include <cstdio>
+#include <exception>
 
-        void new_sigint_handler(int param) {
-            std::cout << "In new_sigint_handler" << std::endl;
-            throw(std::exception());
+void new_sigint_handler(int param) {
+    std::cout << "In new_sigint_handler" << std::endl;
+    throw(std::exception());
+}
+
+int main(int argc, char **argv) {
+    std::cout << "Set user handler for SIGINT signal" << std::endl;
+    __sighandler_t old_sigint_handler;
+    old_sigint_handler = signal(SIGINT, new_sigint_handler);
+    if (SIG_ERR == old_sigint_handler) {
+        perror("Error on set SIGINT handler");
+        return -1;
+    } else if (SIG_DFL == old_sigint_handler) {
+        std::cout << "Found old SIGINT handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigint_handler) {
+        std::cout << "Found old SIGINT handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    try {
+        while (true) {
         }
+    } catch (std::exception ex) {
+        std::cout << "Catch: " << ex.what() << std::endl;
+    }
 
-        int main(int argc, char **argv) {
-            std::cout << "Set user handler for SIGINT signal" << std::endl;
-            __sighandler_t old_sigint_handler;
-            old_sigint_handler = signal(SIGINT, new_sigint_handler);
-            if (SIG_ERR == old_sigint_handler) {
-                perror("Error on set SIGINT handler");
-                return -1;
-            } else if (SIG_DFL == old_sigint_handler) {
-                std::cout << "Found old SIGINT handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigint_handler) {
-                std::cout << "Found old SIGINT handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            try {
-                while (true) {
-                }
-            } catch (std::exception ex) {
-                std::cout << "Catch: " << ex.what() << std::endl;
-            }
-
-            std::cout << "Set old handler for SIGINT signal" << std::endl;
-            __sighandler_t reset_sigint_handler;
-            reset_sigint_handler = signal(SIGINT, old_sigint_handler);
-            if (SIG_ERR == reset_sigint_handler) {
-                perror("Error on reset SIGINT handler");
-                return -2;
-            }
-            std::cout << "Set successfully" << std::endl;
-            return 0;
-        }
+    std::cout << "Set old handler for SIGINT signal" << std::endl;
+    __sighandler_t reset_sigint_handler;
+    reset_sigint_handler = signal(SIGINT, old_sigint_handler);
+    if (SIG_ERR == reset_sigint_handler) {
+        perror("Error on reset SIGINT handler");
+        return -2;
+    }
+    std::cout << "Set successfully" << std::endl;
+    return 0;
+}
+{% endhighlight %}
 
 运行结果：
 
-        Set user handler for SIGINT signal
-        Found old SIGINT handler: default handling
-        Set successfully
-        ^CIn new_sigint_handler
-        terminate called after throwing an instance of 'std::exception'
-          what():  std::exception
-        已放弃 (核心已转储)
+{% highlight text linenos %}
+Set user handler for SIGINT signal
+Found old SIGINT handler: default handling
+Set successfully
+^CIn new_sigint_handler
+terminate called after throwing an instance of 'std::exception'
+  what():  std::exception
+已放弃 (核心已转储)
+{% endhighlight %}
 
 看来还是不行，主程序不能catch到异常。
 
@@ -271,166 +287,172 @@ C/C++标准库中有这样的头文件\<setjmp.h\>/\<csetjmp\>，可以赋予用
 
 下面代码同时注册了三个信号处理函数，主程序中先等待ctrl-c组合键触发SIGINT信号，然后依次触发SIGFPE信号和SIGSEGV信号。
 
-        #include <iostream>
-        #include <csignal>
-        #include <cstdio>
-        #include <csetjmp>
-        #include <exception>
+{% highlight c++ linenos %}
+#include <iostream>
+#include <csignal>
+#include <cstdio>
+#include <csetjmp>
+#include <exception>
 
-        jmp_buf int_env;
-        jmp_buf fpe_env;
-        jmp_buf segv_env;
+jmp_buf int_env;
+jmp_buf fpe_env;
+jmp_buf segv_env;
 
-        void new_sigint_handler(int param) {
-            std::cout << "In new_sigint_handler" << std::endl;
-            longjmp(int_env, SIGINT);
+void new_sigint_handler(int param) {
+    std::cout << "In new_sigint_handler" << std::endl;
+    longjmp(int_env, SIGINT);
+}
+
+void new_sigfpe_handler(int param) {
+    std::cout << "In new_sigfpe_handler" << std::endl;
+    longjmp(fpe_env, SIGFPE);
+}
+
+void new_sigsegv_handler(int param) {
+    std::cout << "In new_sigsegv_handler" << std::endl;
+    longjmp(segv_env, SIGSEGV);
+}
+
+int main(int argc, char **argv) {
+    std::cout << "Set user handler for SIGINT signal" << std::endl;
+    __sighandler_t old_sigint_handler;
+    old_sigint_handler = signal(SIGINT, new_sigint_handler);
+    if (SIG_ERR == old_sigint_handler) {
+        perror("Error on set SIGINT handler");
+        return -1;
+    } else if (SIG_DFL == old_sigint_handler) {
+        std::cout << "Found old SIGINT handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigint_handler) {
+        std::cout << "Found old SIGINT handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    std::cout << "Set user handler for SIGFPE signal" << std::endl;
+    __sighandler_t old_sigfpe_handler;
+    old_sigfpe_handler = signal(SIGFPE, new_sigfpe_handler);
+    if (SIG_ERR == old_sigfpe_handler) {
+        perror("Error on set SIGFPE handler");
+        return -2;
+    } else if (SIG_DFL == old_sigfpe_handler) {
+        std::cout << "Found old SIGFPE handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigfpe_handler) {
+        std::cout << "Found old SIGFPE handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    std::cout << "Set user handler for SIGSEGV signal" << std::endl;
+    __sighandler_t old_sigsegv_handler;
+    old_sigsegv_handler = signal(SIGSEGV, new_sigsegv_handler);
+    if (SIG_ERR == old_sigsegv_handler) {
+        perror("Error on set SIGSEGV handler");
+        return -3;
+    } else if (SIG_DFL == old_sigsegv_handler) {
+        std::cout << "Found old SIGSEGV handler: default handling" << std::endl;
+    } else if (SIG_IGN == old_sigsegv_handler) {
+        std::cout << "Found old SIGSEGV handler: ignore signal" << std::endl;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    try {
+        int status = setjmp(int_env);
+        if (status) {
+            throw std::exception();
         }
-
-        void new_sigfpe_handler(int param) {
-            std::cout << "In new_sigfpe_handler" << std::endl;
-            longjmp(fpe_env, SIGFPE);
+        while (true) {
         }
+    } catch (std::exception ex) {
+        std::cout << "Catch SIGINT: " << ex.what() << std::endl;
+    }
 
-        void new_sigsegv_handler(int param) {
-            std::cout << "In new_sigsegv_handler" << std::endl;
-            longjmp(segv_env, SIGSEGV);
+    try {
+        int status = setjmp(fpe_env);
+        if (status) {
+            throw std::exception();
         }
-
-        int main(int argc, char **argv) {
-            std::cout << "Set user handler for SIGINT signal" << std::endl;
-            __sighandler_t old_sigint_handler;
-            old_sigint_handler = signal(SIGINT, new_sigint_handler);
-            if (SIG_ERR == old_sigint_handler) {
-                perror("Error on set SIGINT handler");
-                return -1;
-            } else if (SIG_DFL == old_sigint_handler) {
-                std::cout << "Found old SIGINT handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigint_handler) {
-                std::cout << "Found old SIGINT handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            std::cout << "Set user handler for SIGFPE signal" << std::endl;
-            __sighandler_t old_sigfpe_handler;
-            old_sigfpe_handler = signal(SIGFPE, new_sigfpe_handler);
-            if (SIG_ERR == old_sigfpe_handler) {
-                perror("Error on set SIGFPE handler");
-                return -2;
-            } else if (SIG_DFL == old_sigfpe_handler) {
-                std::cout << "Found old SIGFPE handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigfpe_handler) {
-                std::cout << "Found old SIGFPE handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            std::cout << "Set user handler for SIGSEGV signal" << std::endl;
-            __sighandler_t old_sigsegv_handler;
-            old_sigsegv_handler = signal(SIGSEGV, new_sigsegv_handler);
-            if (SIG_ERR == old_sigsegv_handler) {
-                perror("Error on set SIGSEGV handler");
-                return -3;
-            } else if (SIG_DFL == old_sigsegv_handler) {
-                std::cout << "Found old SIGSEGV handler: default handling" << std::endl;
-            } else if (SIG_IGN == old_sigsegv_handler) {
-                std::cout << "Found old SIGSEGV handler: ignore signal" << std::endl;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            try {
-                int status = setjmp(int_env);
-                if (status) {
-                    throw std::exception();
-                }
-                while (true) {
-                }
-            } catch (std::exception ex) {
-                std::cout << "Catch SIGINT: " << ex.what() << std::endl;
-            }
-
-            try {
-                int status = setjmp(fpe_env);
-                if (status) {
-                    throw std::exception();
-                }
-                int a = 0;
-                int b = 10 / a;
-                while (true) {
-                }
-            } catch (std::exception ex) {
-                std::cout << "Catch SIGFPE: " << ex.what() << std::endl;
-            }
-
-            try {
-                int status = setjmp(segv_env);
-                if (status) {
-                    throw std::exception();
-                }
-                int *a = NULL;
-                int b = 10 * (*a);
-                while (true) {
-                }
-            } catch (std::exception ex) {
-                std::cout << "Catch SIGSEGV: " << ex.what() << std::endl;
-            }
-
-            std::cout << "Set old handler for SIGINT signal" << std::endl;
-            __sighandler_t reset_sigint_handler;
-            reset_sigint_handler = signal(SIGINT, old_sigint_handler);
-            if (SIG_ERR == reset_sigint_handler) {
-                perror("Error on reset SIGINT handler");
-                return -4;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            std::cout << "Set old handler for SIGFPE signal" << std::endl;
-            __sighandler_t reset_sigfpe_handler;
-            reset_sigfpe_handler = signal(SIGFPE, old_sigfpe_handler);
-            if (SIG_ERR == reset_sigfpe_handler) {
-                perror("Error on reset SIGFPE handler");
-                return -5;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            std::cout << "Set old handler for SIGSEGV signal" << std::endl;
-            __sighandler_t reset_sigsegv_handler;
-            reset_sigsegv_handler = signal(SIGSEGV, old_sigsegv_handler);
-            if (SIG_ERR == reset_sigsegv_handler) {
-                perror("Error on reset SIGSEGV handler");
-                return -6;
-            }
-            std::cout << "Set successfully" << std::endl;
-
-            return 0;
+        int a = 0;
+        int b = 10 / a;
+        while (true) {
         }
+    } catch (std::exception ex) {
+        std::cout << "Catch SIGFPE: " << ex.what() << std::endl;
+    }
+
+    try {
+        int status = setjmp(segv_env);
+        if (status) {
+            throw std::exception();
+        }
+        int *a = NULL;
+        int b = 10 * (*a);
+        while (true) {
+        }
+    } catch (std::exception ex) {
+        std::cout << "Catch SIGSEGV: " << ex.what() << std::endl;
+    }
+
+    std::cout << "Set old handler for SIGINT signal" << std::endl;
+    __sighandler_t reset_sigint_handler;
+    reset_sigint_handler = signal(SIGINT, old_sigint_handler);
+    if (SIG_ERR == reset_sigint_handler) {
+        perror("Error on reset SIGINT handler");
+        return -4;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    std::cout << "Set old handler for SIGFPE signal" << std::endl;
+    __sighandler_t reset_sigfpe_handler;
+    reset_sigfpe_handler = signal(SIGFPE, old_sigfpe_handler);
+    if (SIG_ERR == reset_sigfpe_handler) {
+        perror("Error on reset SIGFPE handler");
+        return -5;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    std::cout << "Set old handler for SIGSEGV signal" << std::endl;
+    __sighandler_t reset_sigsegv_handler;
+    reset_sigsegv_handler = signal(SIGSEGV, old_sigsegv_handler);
+    if (SIG_ERR == reset_sigsegv_handler) {
+        perror("Error on reset SIGSEGV handler");
+        return -6;
+    }
+    std::cout << "Set successfully" << std::endl;
+
+    return 0;
+}
+{% endhighlight %}
 
 运行结果：
 
-        Set user handler for SIGINT signal
-        Found old SIGINT handler: default handling
-        Set successfully
-        Set user handler for SIGFPE signal
-        Found old SIGFPE handler: default handling
-        Set successfully
-        Set user handler for SIGSEGV signal
-        Found old SIGSEGV handler: default handling
-        Set successfully
-        ^CIn new_sigint_handler
-        Catch SIGINT: std::exception
-        In new_sigfpe_handler
-        Catch SIGFPE: std::exception
-        In new_sigsegv_handler
-        Catch SIGSEGV: std::exception
-        Set old handler for SIGINT signal
-        Set successfully
-        Set old handler for SIGFPE signal
-        Set successfully
-        Set old handler for SIGSEGV signal
-        Set successfully
+{% highlight text linenos %}
+Set user handler for SIGINT signal
+Found old SIGINT handler: default handling
+Set successfully
+Set user handler for SIGFPE signal
+Found old SIGFPE handler: default handling
+Set successfully
+Set user handler for SIGSEGV signal
+Found old SIGSEGV handler: default handling
+Set successfully
+^CIn new_sigint_handler
+Catch SIGINT: std::exception
+In new_sigfpe_handler
+Catch SIGFPE: std::exception
+In new_sigsegv_handler
+Catch SIGSEGV: std::exception
+Set old handler for SIGINT signal
+Set successfully
+Set old handler for SIGFPE signal
+Set successfully
+Set old handler for SIGSEGV signal
+Set successfully
+{% endhighlight %}
 
 查询程序退出状态，可以看到程序是正常退出的：
 
-        $ echo $?
-        0
+{% highlight bash linenos %}
+$ echo $?
+0
+{% endhighlight %}
 
 我已经将该功能写成一个库“enhanced exception handling method”，缩写为“eEHM”，还增加了堆栈的解析功能，可以清晰的看到函数的调用过程。下载地址。
 
