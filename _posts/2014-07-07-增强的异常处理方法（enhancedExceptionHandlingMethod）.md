@@ -454,17 +454,133 @@ $ echo $?
 0
 {% endhighlight %}
 
-我已经将该功能写成一个库“enhanced exception handling method”，缩写为“eEHM”，还增加了堆栈的解析功能，可以清晰的看到函数的调用过程。下载地址。
+我已经将该功能写成一个库“enhanced exception handling method”，缩写为“eEHM”，还增加了堆栈的解析功能，可以清晰的看到函数的调用过程。[下载地址][2]。
 
-示例代码：
+这里以启用SIGFPE、SIGSEGV、SIGINT三个信号为例说明使用方法。示例代码：
 
+{% highlight c++ linenos %}
+#include <iostream>
+#include "include/eEHM.h"
 
+int main(int argc, char **argv) {
+    eEHM *error_handling;
+    try {
+        error_handling = new eEHM();
+        error_handling->SetUserHandler(SIGFPE);
+        error_handling->SetUserHandler(SIGSEGV);
+        error_handling->SetUserHandler(SIGINT);
+    } catch (signal_error ex) {
+        std::cout << ex.what() << std::endl;
+    }
 
-运行结果：
+    try {
+        if (error_handling->isValid()) {
+            int a = 0;
+            int b = 10 / a;
+        }
+    } catch (signal_error ex) {
+        std::cout << ex.what() << std::endl;
+    }
 
+    try {
+        if (error_handling->isValid()) {
+            int *a = NULL;
+            int b = 10 * (*a);
+        }
+    } catch (signal_error ex) {
+        std::cout << ex.what() << std::endl;
+    }
 
+    try {
+        if (error_handling->isValid()) {
+            while (true) {
+            }
+        }
+    } catch (signal_error ex) {
+        std::cout << ex.what() << std::endl;
+    }
 
+    return 0;
+}
+{% endhighlight %}
 
+Debug模式预期的运行结果：
+
+{% highlight text linenos %}
+SIGFPE: backtrace 5 records:
+  0:Debug/test() [0x402ba1]
+    eEHM::GetTrace() at eEHM.cpp:172
+  1:Debug/test() [0x401ee4]
+    eEHM::SetUserHandler(int) at eEHM.cpp:106
+  2:Debug/test() [0x4034b4]
+    main at test.cpp:17
+  3:/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xed) [0x7f518fb6a76d]
+    ??
+  4:Debug/test() [0x401619]
+    _start at ??:0
+
+SIGSEGV: backtrace 5 records:
+  0:Debug/test() [0x402ba1]
+    eEHM::GetTrace() at eEHM.cpp:172
+  1:Debug/test() [0x40206d]
+    eEHM::SetUserHandler(int) at eEHM.cpp:115
+  2:Debug/test() [0x4034db]
+    main at test.cpp:26
+  3:/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xed) [0x7f518fb6a76d]
+    ??
+  4:Debug/test() [0x401619]
+    _start at ??:0
+
+^CSIGINT: backtrace 5 records:
+  0:Debug/test() [0x402ba1]
+    eEHM::GetTrace() at eEHM.cpp:172
+  1:Debug/test() [0x4021f6]
+    eEHM::SetUserHandler(int) at eEHM.cpp:124
+  2:Debug/test() [0x403505]
+    main at test.cpp:35
+  3:/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xed) [0x7f518fb6a76d]
+    ??
+  4:Debug/test() [0x401619]
+    _start at ??:0
+{% endhighlight %}
+
+可以看到，三个信号都正确输出了信号触发的堆栈信息，函数的调用过程清晰明了，由于是Debug模式，还能定位问题所在的源文件和大概行数。另外，前2条记录都是eEHM库内的信息，最后2条记录是操作系统调用程序的信息，一般来说可以忽略。所以，*eEHM库将这4条信息人为屏蔽了*。
+
+Debug模式实际的运行结果：
+
+{% highlight text linenos %}
+SIGFPE: backtrace 5 records:
+  2:Debug/test() [0x4034fc]
+    main at test.cpp:17
+
+SIGSEGV: backtrace 5 records:
+  2:Debug/test() [0x403523]
+    main at test.cpp:26
+
+^CSIGINT: backtrace 5 records:
+  2:Debug/test() [0x40354d]
+    main at test.cpp:35
+{% endhighlight %}
+
+这就是简化了的输出信息，只输出跟用户代码有关的堆栈部分，但堆栈的基本信息以及堆栈内容的顺序号得以保留。
+
+Release模式实际的运行结果：
+
+{% highlight text linenos %}
+SIGFPE: backtrace 5 records:
+  2:Release/test() [0x40350c]
+    main at ??:0
+
+SIGSEGV: backtrace 5 records:
+  2:Release/test() [0x403533]
+    main at ??:0
+
+^CSIGINT: backtrace 5 records:
+  2:Release/test() [0x40355d]
+    main at ??:0
+{% endhighlight %}
+
+在Release模式下，文件信息和行号都不可用。
 
 [1]: ../05/程序中的错误处理方法.html "程序中的错误处理方法"
 [2]: https://github.com/zhh-cui/eEHM "eEHM"
