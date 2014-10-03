@@ -33,7 +33,7 @@ title: Ubuntu驱动USB采集卡（二）
     
     b = y + 2.03211 * (u - 128.0);
     
-- 源代码
+- 源代码1
 
 {% highlight c++ linenos %}
 #include <iostream>
@@ -107,6 +107,45 @@ int main(int argc, char **argv) {
     return 0;
 }
 {% endhighlight %}
+
+调试命令：
+
+        Debug/test ./test.raw
+        
+这里相当于离线调试。
+
+- 源代码2
+
+{% highlight c++ linenos %}
+int main(int argc, char **argv) {
+//  FILE *fp = fopen(argv[1], "rb");
+//  if (!fp) {
+//      std::cout << "不能加载：" << argv[1] << std::endl;
+//      return 1;
+//  }
+
+    unsigned char buf[829440];
+    unsigned char val;
+    char title[10];
+//  while (!feof(fp)) {
+    int counter = 0;
+    while (1) {
+//      sprintf(title, "%ld", ftell(fp) / 829440 + 1);
+        sprintf(title, "%d", counter++);
+
+        for (int i = 0; i < 829440; ++i) {
+//          fscanf(fp, "%c", &val);
+            scanf("%c", &val);
+            buf[i] = val;
+        }
+...
+{% endhighlight %}
+
+调试命令：
+
+        sudo somagic-capture -i 1 | Debug/test -
+        
+这里相当于在线调试。
 
 - 存在问题
     
